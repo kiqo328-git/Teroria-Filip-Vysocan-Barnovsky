@@ -1,7 +1,8 @@
 import math
 from settings import CHUNK_SIZE
+from numba import njit
 
-
+@njit(fastmath=True)
 def get_cave_noise(wx, wy):
     """
     Vytvorí 'hustotu' materiálu na danej súradnici pomocou sínusov.
@@ -13,7 +14,7 @@ def get_cave_noise(wx, wy):
     val += math.sin(wx * 0.15 + wy * 0.15) * 0.4
     return val
 
-
+@njit(fastmath=True)
 def generate_chunk_data(cx, cy):
     """
     Vygeneruje dáta pre chunk na súradniciach cx, cy.
