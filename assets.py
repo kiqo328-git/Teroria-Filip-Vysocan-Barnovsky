@@ -1,5 +1,6 @@
 import pygame
-from settings import TILE_SIZE, COLORS
+import os
+from settings import TILE_SIZE, COLORS,ASSETS_DIR
 from tile_manager import BLOCKS
 
 
@@ -22,26 +23,41 @@ class AssetManager:
             self.dark_textures[block_id] = []
 
             name = data["name"]
-            variants = data["variants"]
+            filename = data.get("file")
 
-            for i in range(variants):
-                # 1. Vygenerovanie základnej textúry (namiesto načítania PNG)
-                original_img = self._generate_dummy_texture(name, i)
-                self.textures[block_id].append(original_img)
+            if filename:
+                path = os.path.join(ASSETS_DIR, filename)
+                try:
+                    # Načítanie obrázka
+                    img = pygame.image.load(path).convert_alpha()
+                    img = pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
 
-                # 2. Vytvorenie tmavej verzie (Baking)
-                dark_img = original_img.copy()
+                    # Uložíme do zoznamu
+                    self.textures[block_id].append(img)
 
-                # Vytvoríme tmavo-sivú vrstvu
-                dark_overlay = pygame.Surface((TILE_SIZE, TILE_SIZE))
-                dark_overlay.fill((100, 100, 100))  # RGB (100,100,100)
+                    # Vytvorenie tmavej verzie
+                    dark_img = img.copy()
+                    dark_overlay = pygame.Surface((TILE_SIZE, TILE_SIZE))
+                    dark_overlay.fill((100, 100, 100))
+                    dark_img.blit(dark_overlay, (0, 0), special_flags=pygame.BLEND_MULT)
 
-                # Aplikujeme násobenie farieb (BLEND_MULT)
-                dark_img.blit(dark_overlay, (0, 0), special_flags=pygame.BLEND_MULT)
+                    self.dark_textures[block_id].append(dark_img)
 
-                self.dark_textures[block_id].append(dark_img)
+                    print(f"Blok '{name}': načítaný súbor '{filename}'")
 
-            print(f"Blok '{name}': pripravené {variants} varianty (Popredie + Pozadie).")
+                except FileNotFoundError:
+                    print(f"CHYBA: Súbor '{filename}' sa nenašiel v priečinku '{ASSETS_DIR}'!")
+                    self._create_fallback(block_id)
+
+            else:
+                print(f"VAROVANIE: Blok '{name}' nemá definovaný súbor!")
+                self._create_fallback(block_id)
+
+            def _create_fallback(self, block_id):
+                surf = pygame.Surface((TILE_SIZE, TILE_SIZE))
+                surf.fill((255, 0, 255))  # Ružová pre chybu
+                self.textures[block_id].append(surf)
+                self.dark_textures[block_id].append(surf)
 
     def _generate_dummy_texture(self, name, variant_index):
         """

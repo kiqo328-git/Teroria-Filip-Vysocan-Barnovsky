@@ -1,14 +1,6 @@
 import pygame
+from settings import BLOCKS
 
-# Databáza blokov
-# ID 0 je vždy vzduch
-BLOCKS = {
-    0: {"name": "Air", "solid": False, "variants": 0},
-    1: {"name": "Grass", "solid": True, "variants": 1},
-    2: {"name": "Stone", "solid": True, "variants": 3},  # 3 rôzne verzie kameňa
-    3: {"name": "Dirt", "solid": True, "variants": 1},
-    4: {"name": "Bedrock", "solid": True, "variants": 1},
-}
 
 
 class TileManager:

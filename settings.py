@@ -20,3 +20,13 @@ COLORS = {
 
 # Farba oblohy
 SKY_COLOR = (135, 206, 235)
+
+ASSETS_DIR = "assets"
+
+BLOCKS = {
+    0: {"name": "Air", "solid": False, "variants": 0, "file": None},
+    1: {"name": "Grass", "solid": True, "variants": 1, "file": "dirt_grass.png"},
+    2: {"name": "Stone", "solid": True, "variants": 1, "file": "stone.png"},
+    3: {"name": "Dirt", "solid": True, "variants": 1, "file": "dirt.png"},
+    4: {"name": "Bedrock", "solid": True, "variants": 1, "file": "greystone.png"},
+}

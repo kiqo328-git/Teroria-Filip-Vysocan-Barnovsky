@@ -47,7 +47,7 @@ class Player:
 def main():
     pygame.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("Terraria Infinite - Python")
+    pygame.display.set_caption("Troria - Python")
     clock = pygame.time.Clock()
 
     assets = AssetManager()
