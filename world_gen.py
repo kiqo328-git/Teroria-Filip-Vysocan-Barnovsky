@@ -1,70 +1,79 @@
 import math
-import random
 from settings import CHUNK_SIZE
 
 
-def generate_chunk_data(cx, cy, seed=12345):
+def get_cave_noise(wx, wy):
     """
-    Vygeneruje dáta pre jeden chunk (16x16).
-    Vráti dve polia: layer_fg (popredie) a layer_bg (pozadie).
+    Vytvorí 'hustotu' materiálu na danej súradnici pomocou sínusov.
+    Ak je hodnota nízka, vznikne jaskyňa.
+    """
+    # Kombinácia vĺn s rôznou frekvenciou pre organický tvar
+    # 0.05 určuje veľkosť jaskýň, 0.5 určuje "šum"
+    val = math.sin(wx * 0.06) + math.cos(wy * 0.06)
+    val += math.sin(wx * 0.15 + wy * 0.15) * 0.4
+    return val
+
+
+def generate_chunk_data(cx, cy):
+    """
+    Vygeneruje dáta pre chunk na súradniciach cx, cy.
     """
     layer_fg = [[0] * CHUNK_SIZE for _ in range(CHUNK_SIZE)]
     layer_bg = [[0] * CHUNK_SIZE for _ in range(CHUNK_SIZE)]
 
     for y in range(CHUNK_SIZE):
         for x in range(CHUNK_SIZE):
-            # Prepočet na globálne súradnice sveta
+            # Globálne súradnice
             world_x = cx * CHUNK_SIZE + x
             world_y = cy * CHUNK_SIZE + y
 
-            # --- 1. Terén (Povrch) ---
-            # Použijeme sínusovku na vytvorenie kopcov
-            # world_x * 0.1 určuje šírku kopcov
-            # * 10 určuje výšku kopcov
-            # + 15 posúva zem nižšie (aby nebola úplne hore na obrazovke)
-            height_val = math.sin(world_x * 0.1) * 8 + 15
-            surface_level = int(height_val)
+            # --- 1. Povrch Terénu (Hory a doliny) ---
+            # Použijeme viac sínusoviek pre zaujímavejší terén
+            base_height = math.sin(world_x * 0.05) * 10  # Veľké kopce
+            detail_height = math.sin(world_x * 0.2) * 2  # Malé hrbolčeky
 
-            # --- 2. Jaskyne (Noise) ---
-            # Jednoduchý pseudo-náhodný šum pre diery v zemi
-            random.seed(world_x * 49297 + world_y * 93821 + seed)
-            cave_noise = random.random()  # Číslo od 0.0 do 1.0
+            # Hladina zeme (Surface Level)
+            # +10 posunie zem nižšie, aby sme mali miesto na hlavou
+            surface_level = int(base_height + detail_height + 12)
 
-            # --- 3. Rozhodovanie o bloku ---
+            # --- 2. Jaskyne (Matematické tunely) ---
+            cave_val = get_cave_noise(world_x, world_y)
+            # Ak je cave_val < -0.8, vznikne diera (jaskyňa)
+            is_cave = (cave_val < -0.8)
 
-            # --- POZADIE (BACKGROUND) ---
-            # Pozadie chceme všade pod úrovňou terénu (aby v jaskyni nebolo vidieť oblohu)
+            # --- 3. Osádzanie Blokov ---
+
+            # -- POZADIE (Vždy vyplnené pod úrovňou terénu) --
             if world_y >= surface_level:
+                # Tesne pod povrchom hlina, hlbšie kameň
                 if world_y < surface_level + 5:
-                    layer_bg[y][x] = 3  # Dirt (Hlina)
+                    layer_bg[y][x] = 3  # Dirt
                 else:
-                    layer_bg[y][x] = 2  # Stone (Kameň)
+                    layer_bg[y][x] = 2  # Stone
             else:
-                layer_bg[y][x] = 0  # Vzduch (nad zemou)
+                layer_bg[y][x] = 0  # Vzduch
 
-            # --- POPREDIE (FOREGROUND) ---
+            # -- POPREDIE (Pevné bloky) --
             if world_y < surface_level:
-                # Nad zemou
-                layer_fg[y][x] = 0  # Air
+                layer_fg[y][x] = 0  # Vzduch nad zemou
 
             elif world_y == surface_level:
-                # Tráva (len ak tam nie je jaskyňa)
-                if cave_noise < 0.8:
+                # Tráva (ak to nie je vchod do jaskyne)
+                if not is_cave:
                     layer_fg[y][x] = 1  # Grass
                 else:
-                    layer_fg[y][x] = 0  # Diera na povrchu
+                    layer_fg[y][x] = 0  # Vchod do jaskyne
 
             else:
                 # Pod zemou
-                if cave_noise > 0.8:
-                    # Jaskyňa (Vzduch v popredí, ale pozadie ostáva)
-                    layer_fg[y][x] = 0
+                if is_cave:
+                    layer_fg[y][x] = 0  # Jaskyňa (vzduch)
                 else:
-                    # Pevná zem
+                    # Pevná hmota
                     if world_y < surface_level + 5:
                         layer_fg[y][x] = 3  # Dirt
-                    elif world_y > surface_level + 50:
-                        layer_fg[y][x] = 4  # Bedrock (veľmi hlboko)
+                    elif world_y > surface_level + 40:
+                        layer_fg[y][x] = 4  # Bedrock (úplne dole, ak chceš dno)
                     else:
                         layer_fg[y][x] = 2  # Stone
 
