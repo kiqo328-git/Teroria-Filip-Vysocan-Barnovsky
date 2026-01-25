@@ -7,6 +7,7 @@ from chunk import Chunk
 from physics import check_collisions
 from character_body import CharacterBody
 from player_input import PlayerInput
+from inventory_manager import InventoryManager
 
 
 class Player:
@@ -55,8 +56,27 @@ def main():
     assets = AssetManager()
     tile_manager = TileManager(assets)
     # Use new CharacterBody + PlayerInput separation
-    player = CharacterBody()
+    # create player body with assets and a simple inventory/hotbar
+    player = CharacterBody(assets)
+    inventory = InventoryManager(initial=[1, 2, 3, 0, 0])
+    player.inventory = inventory
+    player.set_hotbar(inventory.hotbar)
+    player.set_hotbar_index(inventory.index)
     player_input = PlayerInput(player)
+    # transient UI messages (text, remaining_ms)
+    ui_messages = []
+
+    # register place end callback to show feedback
+    def _on_place_end(result=None):
+        if result:
+            ui_messages.append(("Placed", 1200))
+        else:
+            ui_messages.append(("Can't place", 1200))
+
+    try:
+        player.register_place_end(_on_place_end)
+    except Exception:
+        pass
 
     # Slovník pre chunky: kľúč je (cx, cy)
     chunks = {}
@@ -128,6 +148,38 @@ def main():
             f"Seed: {SEED}"
         )
         screen.blit(pygame.font.SysFont("Arial", 18).render(info_text, True, (0, 0, 0)), (10, 10))
+
+        # Hotbar UI (bottom-center)
+        hotbar_slots = getattr(inventory, 'hotbar', [])
+        slot_w = 48
+        slot_h = 48
+        total_w = slot_w * len(hotbar_slots)
+        start_x = SCREEN_WIDTH // 2 - total_w // 2
+        y = SCREEN_HEIGHT - slot_h - 10
+        for i, item_id in enumerate(hotbar_slots):
+            sx = start_x + i * slot_w
+            rect = pygame.Rect(sx, y, slot_w - 4, slot_h - 4)
+            pygame.draw.rect(screen, (200, 200, 200), rect)
+            if i == inventory.index:
+                pygame.draw.rect(screen, (255, 215, 0), rect, 3)
+            # draw item icon if available
+            if item_id and assets is not None:
+                try:
+                    icon = assets.textures[item_id][0]
+                    icon_s = pygame.transform.scale(icon, (32, 32))
+                    screen.blit(icon_s, (sx + 8, y + 8))
+                except Exception:
+                    pass
+
+        # draw transient UI messages
+        for i, (txt, ms) in enumerate(list(ui_messages)):
+            font = pygame.font.SysFont('Arial', 20)
+            surf = font.render(txt, True, (0, 0, 0))
+            screen.blit(surf, (10, 40 + i * 22))
+            # decrease timers
+            ui_messages[i] = (txt, ms - clock.get_time())
+        # remove expired
+        ui_messages = [m for m in ui_messages if m[1] > 0]
 
         pygame.display.flip()
         # tick at end and allow dt usage above
