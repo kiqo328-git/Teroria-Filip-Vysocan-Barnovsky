@@ -1,6 +1,34 @@
 import math
-from settings import CHUNK_SIZE
+from settings import CHUNK_SIZE, SEED, FREQ, MULTIPLIER, BASE_HEIGHT
+import random
+import numpy as np
 from numba import njit
+
+def get_height_data(cx):
+    heights = np.zeros(CHUNK_SIZE, dtype=np.float32)
+
+    scale = 1.0 / FREQ
+
+    for i in range(CHUNK_SIZE):
+        world_x = cx * CHUNK_SIZE + i
+        x0 = (world_x // scale) * scale
+        x1 = x0 + scale
+
+        random.seed(int(SEED + x0))
+        v0 = random.random()
+
+        random.seed(int(SEED + x1))
+        v1 = random.random()
+
+        t = (world_x - x0) / scale
+
+        t = t * t * (3 - 2 * t)
+
+        noise_value = v0 * (1 - t) + v1 * t
+
+        heights[i] = noise_value * MULTIPLIER + BASE_HEIGHT
+
+    return heights
 
 @njit(fastmath=True)
 def get_cave_noise(wx, wy):
@@ -15,12 +43,12 @@ def get_cave_noise(wx, wy):
     return val
 
 @njit(fastmath=True)
-def generate_chunk_data(cx, cy):
+def generate_chunk_data(cx, cy, height_data):
     """
     Vygeneruje dáta pre chunk na súradniciach cx, cy.
     """
-    layer_fg = [[0] * CHUNK_SIZE for _ in range(CHUNK_SIZE)]
-    layer_bg = [[0] * CHUNK_SIZE for _ in range(CHUNK_SIZE)]
+    layer_fg = np.zeros((CHUNK_SIZE, CHUNK_SIZE), dtype=np.int8)
+    layer_bg = np.zeros((CHUNK_SIZE, CHUNK_SIZE), dtype=np.int8)
 
     for y in range(CHUNK_SIZE):
         for x in range(CHUNK_SIZE):
@@ -28,14 +56,7 @@ def generate_chunk_data(cx, cy):
             world_x = cx * CHUNK_SIZE + x
             world_y = cy * CHUNK_SIZE + y
 
-            # --- 1. Povrch Terénu (Hory a doliny) ---
-            # Použijeme viac sínusoviek pre zaujímavejší terén
-            base_height = math.sin(world_x * 0.05) * 10  # Veľké kopce
-            detail_height = math.sin(world_x * 0.2) * 2  # Malé hrbolčeky
-
-            # Hladina zeme (Surface Level)
-            # +10 posunie zem nižšie, aby sme mali miesto na hlavou
-            surface_level = int(base_height + detail_height + 12)
+            surface_level = int(height_data[x])
 
             # --- 2. Jaskyne (Matematické tunely) ---
             cave_val = get_cave_noise(world_x, world_y)
@@ -59,7 +80,6 @@ def generate_chunk_data(cx, cy):
                 layer_fg[y][x] = 0  # Vzduch nad zemou
 
             elif world_y == surface_level:
-                # Tráva (ak to nie je vchod do jaskyne)
                 if not is_cave:
                     layer_fg[y][x] = 1  # Grass
                 else:
@@ -73,8 +93,8 @@ def generate_chunk_data(cx, cy):
                     # Pevná hmota
                     if world_y < surface_level + 5:
                         layer_fg[y][x] = 3  # Dirt
-                    elif world_y == 0:
-                        layer_fg[y][x] = 4  # Bedrock (úplne dole, ak chceš dno)
+                    elif world_y > surface_level + 500:
+                        layer_fg[y][x] = 4  # Bedrock
                     else:
                         layer_fg[y][x] = 2  # Stone
 

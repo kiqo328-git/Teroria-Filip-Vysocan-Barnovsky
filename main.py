@@ -61,7 +61,6 @@ def main():
 
     # Koľko chunkov okolo hráča sa má vykresliť/generovať
     # 2 chunky na každú stranu (tj. cca 5x5 chunkov aktívnych)
-    RENDER_DISTANCE = 2
 
     running = True
     while running:
@@ -96,8 +95,6 @@ def main():
         # Vykresľovanie
         screen.fill(SKY_COLOR)
 
-        # Vykresliť len viditeľné chunky (optimalizácia)
-        # Prejdeme slovník, ale vykreslíme len tie blízko hráča
         for dy in range(-RENDER_DISTANCE, RENDER_DISTANCE + 1):
             for dx in range(-RENDER_DISTANCE - 1, RENDER_DISTANCE + 2):
                 cx = player_cx + dx
@@ -105,10 +102,24 @@ def main():
                 if (cx, cy) in chunks:
                     chunks[(cx, cy)].draw(screen, camera_scroll)
 
-        player.draw(screen, camera_scroll)
+        for key in list(chunks.keys()):
+            cx, cy = key
+            dist_x = abs(cx - player_cx)
+            dist_y = abs(cy - player_cy)
 
+            if dist_x > UNLOAD_DISTANCE or dist_y > UNLOAD_DISTANCE:
+                del chunks[key]
+
+        player.draw(screen, camera_scroll)
+        world_x = player.rect.centerx//32
+        world_y = -player.rect.centery//32
         # UI
-        info_text = f"FPS: {int(clock.get_fps())} | Chunk: {player_cx}, {player_cy} | Seed: {SEED}"
+        info_text = (
+            f"FPS: {int(clock.get_fps())} | "
+            f"World: {world_x}, {world_y} | "
+            f"Chunk: {player_cx}, {-player_cy} | "
+            f"Seed: {SEED}"
+        )
         screen.blit(pygame.font.SysFont("Arial", 18).render(info_text, True, (0, 0, 0)), (10, 10))
 
         pygame.display.flip()

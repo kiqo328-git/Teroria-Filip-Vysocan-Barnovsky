@@ -1,6 +1,6 @@
 import pygame
 from settings import TILE_SIZE, CHUNK_SIZE
-from world_gen import generate_chunk_data
+from world_gen import generate_chunk_data,get_height_data
 
 
 class Chunk:
@@ -10,7 +10,8 @@ class Chunk:
         self.tile_manager = tile_manager
 
         # Generovanie (teraz už s lepšími jaskyňami)
-        self.layer_fg, self.layer_bg = generate_chunk_data(cx, cy)
+        self.surface_heights = get_height_data(cx)
+        self.layer_fg, self.layer_bg = generate_chunk_data(cx, cy, self.surface_heights)
 
         self.image = pygame.Surface((CHUNK_SIZE * TILE_SIZE, CHUNK_SIZE * TILE_SIZE))
         self.image.set_colorkey((0, 0, 0))
