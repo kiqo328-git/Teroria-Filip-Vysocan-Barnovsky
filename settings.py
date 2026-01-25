@@ -1,3 +1,5 @@
+import random
+
 import pygame
 
 # --- Konfigurácia Obrazovky ---
@@ -30,3 +32,5 @@ BLOCKS = {
     3: {"name": "Dirt", "solid": True, "variants": 1, "file": "dirt.png"},
     4: {"name": "Bedrock", "solid": True, "variants": 1, "file": "greystone.png"},
 }
+
+SEED = random.randint(-999999, 999999)

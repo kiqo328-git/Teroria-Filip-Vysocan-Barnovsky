@@ -73,7 +73,7 @@ def generate_chunk_data(cx, cy):
                     # Pevná hmota
                     if world_y < surface_level + 5:
                         layer_fg[y][x] = 3  # Dirt
-                    elif world_y > surface_level + 40:
+                    elif world_y == 0:
                         layer_fg[y][x] = 4  # Bedrock (úplne dole, ak chceš dno)
                     else:
                         layer_fg[y][x] = 2  # Stone

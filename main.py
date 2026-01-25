@@ -108,7 +108,7 @@ def main():
         player.draw(screen, camera_scroll)
 
         # UI
-        info_text = f"FPS: {int(clock.get_fps())} | Chunk: {player_cx}, {player_cy}"
+        info_text = f"FPS: {int(clock.get_fps())} | Chunk: {player_cx}, {player_cy} | Seed: {SEED}"
         screen.blit(pygame.font.SysFont("Arial", 18).render(info_text, True, (0, 0, 0)), (10, 10))
 
         pygame.display.flip()
