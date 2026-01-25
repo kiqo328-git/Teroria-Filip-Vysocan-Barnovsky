@@ -5,6 +5,8 @@ from assets import AssetManager
 from tile_manager import TileManager
 from chunk import Chunk
 from physics import check_collisions
+from character_body import CharacterBody
+from player_input import PlayerInput
 
 
 class Player:
@@ -52,7 +54,9 @@ def main():
 
     assets = AssetManager()
     tile_manager = TileManager(assets)
-    player = Player()
+    # Use new CharacterBody + PlayerInput separation
+    player = CharacterBody()
+    player_input = PlayerInput(player)
 
     # Slovník pre chunky: kľúč je (cx, cy)
     chunks = {}
@@ -67,6 +71,8 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            else:
+                player_input.process_event(event)
 
         # --- Logika Nekonečného Sveta ---
         # Zistíme, v ktorom chunku je hráč
@@ -82,9 +88,10 @@ def main():
                 if (target_cx, target_cy) not in chunks:
                     chunks[(target_cx, target_cy)] = Chunk(target_cx, target_cy, tile_manager)
 
-        # Update hráča
-        player.update()
-        check_collisions(player, chunks)
+        # Update input & player
+        player_input.update()
+        dt = clock.get_time()
+        player.update(chunks, dt_ms=dt)
 
         # Kamera
         target_x = player.rect.centerx - SCREEN_WIDTH // 2
@@ -123,6 +130,7 @@ def main():
         screen.blit(pygame.font.SysFont("Arial", 18).render(info_text, True, (0, 0, 0)), (10, 10))
 
         pygame.display.flip()
+        # tick at end and allow dt usage above
         clock.tick(FPS)
 
     pygame.quit()
