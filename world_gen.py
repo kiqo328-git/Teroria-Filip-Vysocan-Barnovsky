@@ -4,6 +4,7 @@ import random
 import numpy as np
 from numba import njit
 
+@njit(fastmath=True)
 def get_height_data(cx):
     heights = np.zeros(CHUNK_SIZE, dtype=np.float32)
 
