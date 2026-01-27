@@ -41,3 +41,7 @@ BASE_HEIGHT = 10.0
 
 RENDER_DISTANCE = 2
 UNLOAD_DISTANCE = RENDER_DISTANCE + 2
+
+PLAYER_SCALE = 0.4
+
+PLAYER_SKINS = {0:{"head":"male_head.png", "arm":"male_arm.png", "body": "male_body.png", "leg":"male_leg.png"},}

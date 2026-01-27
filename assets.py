@@ -1,6 +1,6 @@
 import pygame
 import os
-from settings import TILE_SIZE, COLORS,ASSETS_DIR
+from settings import *
 from tile_manager import BLOCKS
 
 
@@ -17,7 +17,7 @@ class AssetManager:
         print("--- AssetManager: Generujem textúry a 'pečiem' tmavé pozadia ---")
 
         for block_id, data in BLOCKS.items():
-            if block_id == 0: continue  # Vzduch preskočíme
+            if block_id == 0: continue
 
             self.textures[block_id] = []
             self.dark_textures[block_id] = []
@@ -58,6 +58,17 @@ class AssetManager:
                 surf.fill((255, 0, 255))  # Ružová pre chybu
                 self.textures[block_id].append(surf)
                 self.dark_textures[block_id].append(surf)
+
+    def get_player_paths(self, index):
+        if index not in PLAYER_SKINS:
+            print(f"POZOR: Skin index {index} neexistuje, načítavam 0.")
+            index = 0
+        raw_skin = PLAYER_SKINS[index]
+        full_paths = {}
+        for part, filename in raw_skin.items():
+            full_paths[part] = os.path.join(ASSETS_DIR, filename)
+        return full_paths
+
 
     def _generate_dummy_texture(self, name, variant_index):
         """
