@@ -119,11 +119,6 @@ class CharacterBody:
         self.sprites.update()
 
     def draw(self, screen, camera_scroll=[0, 0]):
-        # Debug Hitbox (ak chceš vidieť či sedia nohy a hlava)
-        # debug_rect = self.rect.copy()
-        # debug_rect.x -= camera_scroll[0]
-        # debug_rect.y -= camera_scroll[1]
-        # pygame.draw.rect(screen, (0, 255, 0), debug_rect, 1)
 
         for sprite in self.sprites:
             offset_pos = (
@@ -131,3 +126,6 @@ class CharacterBody:
                 sprite.rect.y - camera_scroll[1]
             )
             screen.blit(sprite.image, offset_pos)
+
+    def get_player_pos(self):
+        return (self.rect.centerx, self.rect.centery)

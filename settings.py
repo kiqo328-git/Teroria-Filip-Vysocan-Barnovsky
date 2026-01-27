@@ -45,3 +45,5 @@ UNLOAD_DISTANCE = RENDER_DISTANCE + 2
 PLAYER_SCALE = 0.4
 
 PLAYER_SKINS = {0:{"head":"male_head.png", "arm":"male_arm.png", "body": "male_body.png", "leg":"male_leg.png"},}
+
+CURRENT_PLAYER_REACH = 5 * TILE_SIZE
