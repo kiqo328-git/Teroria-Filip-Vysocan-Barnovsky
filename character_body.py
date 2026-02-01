@@ -1,5 +1,5 @@
 import pygame
-from settings import PLAYER_SCALE
+from settings import PLAYER_SCALE, NPC_INTERACT_RANGE
 
 
 class BodyPart(pygame.sprite.Sprite):
@@ -129,3 +129,44 @@ class CharacterBody:
 
     def get_player_pos(self):
         return (self.rect.centerx, self.rect.centery)
+
+
+# --- NOVÁ TRIEDA NPC ---
+class NPC(CharacterBody):
+    def __init__(self, x, y, scale, skin, name="Obchodník"):
+        # NPC je nehybné, nepotrebuje fyziku (isLocal=False)
+        super().__init__(x, y, scale, skin, isLocal=False)
+        self.name = name
+        self.is_interactable = True
+        self.interaction_range = NPC_INTERACT_RANGE
+
+    def update(self, player_rect):
+        """NPC logiku riadi main.py, vrátane otáčania k hráčovi."""
+        self.sync_sprites_to_collider()
+        self.face_target(player_rect)
+        self.sprites.update()
+
+    def face_target(self, target_rect):
+        """Otáča NPC smerom k hráčovi (target_rect)."""
+        player_x = target_rect.centerx
+        npc_x = self.rect.centerx
+
+        # Určí, ktorým smerom je hráč
+        facing_right_new = player_x > npc_x
+
+        # Ak sa smer zmenil, otočí vizuál
+        if self.facing_right != facing_right_new:
+            self.flip()
+            self.facing_right = facing_right_new
+
+    def interact(self):
+        """Logika interakcie s NPC (simulácia)."""
+        return f"NPC {self.name}: Ahoj, svetobežník! Chceš niečo kúpiť?"
+
+    def is_player_in_range(self, player_center_pos):
+        """Kontroluje, či je hráč v dosahu interakcie."""
+        px, py = player_center_pos
+        dx = self.rect.centerx - px
+        dy = self.rect.centery - py
+        # Používame vzdialenosť (na druhú) pre rýchlejší výpočet bez odmocniny
+        return (dx * dx + dy * dy) <= (self.interaction_range * self.interaction_range)

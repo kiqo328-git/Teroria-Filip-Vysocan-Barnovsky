@@ -9,7 +9,8 @@ class Chunk:
         self.tile_manager = tile_manager
 
         self.surface_heights = get_height_data(cx)
-        self.layer_fg, self.layer_bg = generate_chunk_data(cx, cy, self.surface_heights)
+        # ZMENA: generate_chunk_data teraz vracia aj npc_spawn_coords
+        self.layer_fg, self.layer_bg, self.npc_spawn_coords = generate_chunk_data(cx, cy, self.surface_heights)
 
         self.image = pygame.Surface((CHUNK_SIZE * TILE_SIZE, CHUNK_SIZE * TILE_SIZE))
         self.image.set_colorkey((0, 0, 0))
