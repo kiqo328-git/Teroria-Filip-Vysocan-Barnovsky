@@ -1,9 +1,5 @@
 class InventoryManager:
-    """Simple inventory manager that holds a hotbar list and selected index.
-
-    Hotbar items are represented by integer IDs (e.g., block ids from settings.BLOCKS).
-    """
-    def __init__(self, hotbar_size=5, initial=None):
+    def __init__(self, hotbar_size=8, initial=None):
         if initial:
             self.hotbar = list(initial)
         else:
@@ -21,7 +17,6 @@ class InventoryManager:
         return 0
 
     def scroll(self, delta):
-        # wrap-around scroll for convenience
         if len(self.hotbar) == 0:
             return
         self.index = (self.index + delta) % len(self.hotbar)

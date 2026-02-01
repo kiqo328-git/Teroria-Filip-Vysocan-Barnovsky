@@ -1,5 +1,6 @@
 import pygame
-from settings import PLAYER_SCALE, NPC_INTERACT_RANGE
+from settings import PLAYER_SCALE, NPC_INTERACT_RANGE, TILE_SIZE, CURRENT_PLAYER_REACH,CHUNK_SIZE
+from calculation import is_player_near_block
 
 
 class BodyPart(pygame.sprite.Sprite):
@@ -37,10 +38,6 @@ class CharacterBody:
         self.scale = scale
         self.facing_right = False
 
-        # --- HITBOX ---
-        # Tento Rect definuje fyzické telo.
-        # Ak je nastavený správne (výška 56), tak pri kolíziách v physics.py
-        # sa bude kontrolovať priestor od nôh až po hlavu.
         collider_width = 50 * scale
         collider_height = 160 * scale
 
@@ -51,8 +48,8 @@ class CharacterBody:
             self.velocity = pygame.math.Vector2(0, 0)
             self.speed = 350
             self.jump_force = -12
-            self.gravity = 0.5  # Iba hodnota, logiku rieši physics.py
-            self.max_gravity = 15  # Iba hodnota
+            self.gravity = 0.5
+            self.max_gravity = 15
             self.grounded = False
 
         self.sprites = pygame.sprite.Group()
@@ -126,6 +123,32 @@ class CharacterBody:
                 sprite.rect.y - camera_scroll[1]
             )
             screen.blit(sprite.image, offset_pos)
+
+    def destroy_block(self, xPos, yPos, chunks):
+        tile_col = int(xPos // TILE_SIZE)
+        tile_row = int(yPos // TILE_SIZE)
+
+        block_center_x = (tile_col * TILE_SIZE) + (TILE_SIZE / 2)
+        block_center_y = (tile_row * TILE_SIZE) + (TILE_SIZE / 2)
+
+        target_cx = int(block_center_x // (CHUNK_SIZE * TILE_SIZE))
+        target_cy = int(block_center_y // (CHUNK_SIZE * TILE_SIZE))
+
+        chunk_key = (target_cx, target_cy)
+
+        p_center_x, p_center_y = self.get_player_pos()
+
+        if chunk_key in chunks:
+            if is_player_near_block(p_center_x, p_center_y, block_center_x, block_center_y,
+                                    float(CURRENT_PLAYER_REACH)):
+
+                destroyed_id = chunks[chunk_key].destroy_block_at(block_center_x, block_center_y)
+
+                if destroyed_id != 0:
+                    pass
+                    #print(f"Zniceny blok ID: {destroyed_id}")
+            else:
+                pass
 
     def get_player_pos(self):
         return (self.rect.centerx, self.rect.centery)

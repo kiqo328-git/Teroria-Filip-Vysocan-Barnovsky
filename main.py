@@ -7,14 +7,7 @@ from chunk import Chunk
 from physics import apply_physics
 from character_body import CharacterBody, NPC
 from player_input import PlayerInput
-from numba import njit
-
-
-@njit(fastmath=True)
-def is_player_near_block(px, py, bx, by, reach):
-    dx = px - bx
-    dy = py - by
-    return (dx * dx + dy * dy) <= (reach * reach)
+from calculation import is_player_near_block
 
 
 def main():
