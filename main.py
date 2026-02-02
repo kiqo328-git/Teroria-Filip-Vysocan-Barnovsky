@@ -8,14 +8,11 @@ from physics import apply_physics
 from character_body import CharacterBody, NPC
 from player_input import PlayerInput
 from calculation import is_player_near_block
+from menu import Menu
 
 
-def main():
-    pygame.init()
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("Troria - Python")
-    clock = pygame.time.Clock()
-
+def run_singleplayer(screen, clock):
+  
     assets = AssetManager()
     tile_manager = TileManager(assets)
 
@@ -45,6 +42,10 @@ def main():
         # --- EVENT HANDLING ---
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 running = False
 
             # Interakcia s E
@@ -176,8 +177,29 @@ def main():
 
         pygame.display.flip()
 
-    pygame.quit()
-    sys.exit()
+    # Koniec hry, vrátime sa do menu (neukončujeme pygame)
+    return
+
+
+def main():
+    pygame.init()
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    pygame.display.set_caption("Troria - Python")
+    clock = pygame.time.Clock()
+
+    menu = Menu(screen)
+
+    while True:
+        action = menu.handle_input()
+
+        if action == "game":
+            run_singleplayer(screen, clock)
+        elif action == "quit":
+            pygame.quit()
+            sys.exit()
+
+        menu.draw()
+        clock.tick(FPS)
 
 
 if __name__ == "__main__":

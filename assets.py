@@ -53,11 +53,11 @@ class AssetManager:
                 print(f"VAROVANIE: Blok '{name}' nemá definovaný súbor!")
                 self._create_fallback(block_id)
 
-            def _create_fallback(self, block_id):
-                surf = pygame.Surface((TILE_SIZE, TILE_SIZE))
-                surf.fill((255, 0, 255))  # Ružová pre chybu
-                self.textures[block_id].append(surf)
-                self.dark_textures[block_id].append(surf)
+    def _create_fallback(self, block_id):
+        surf = pygame.Surface((TILE_SIZE, TILE_SIZE))
+        surf.fill((255, 0, 255))  # Ružová pre chybu
+        self.textures[block_id].append(surf)
+        self.dark_textures[block_id].append(surf)
 
     def get_player_paths(self, index):
         if index not in PLAYER_SKINS:
