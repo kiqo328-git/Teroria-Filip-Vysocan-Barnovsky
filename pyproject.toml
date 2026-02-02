@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "teroria"
+version = "1.0.0"
+description = "OPGP projekt - 2D Sandbox hra v Pygone"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+    { name = "Filip Vysocan" },
+    { name = "Barnovsky" },
+]
+dependencies = [
+    "pygame>=2.5.0",
+    "numpy",
+    "numba",
+]
+
+[project.urls]
+"Source" = "https://github.com/..." # Tu si môžeš doplniť link ak to máš na gite
