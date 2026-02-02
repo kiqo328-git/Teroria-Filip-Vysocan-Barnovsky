@@ -2,8 +2,6 @@ import pygame
 from settings import CHUNK_SIZE, TILE_SIZE, CURRENT_PLAYER_REACH
 
 
-
-
 class PlayerInput:
     def __init__(self, player):
         self.player = player
@@ -11,9 +9,7 @@ class PlayerInput:
 
     def update(self, dt, camera_scroll, chunks):
         keys = pygame.key.get_pressed()
-        mouse_buttons = pygame.mouse.get_pressed()
 
-        # --- POHYB ---
         self.player.set_player_velocity_x(0)
 
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
@@ -28,11 +24,6 @@ class PlayerInput:
 
         if (keys[pygame.K_SPACE] or keys[pygame.K_w]) and self.player.grounded:
             self.player.jump()
-
-        wmx, wmy = self.get_mouse_world_pos(camera_scroll)
-
-        if mouse_buttons[0]:
-            self.player.destroy_block(wmx, wmy, chunks)
 
     def get_mouse_world_pos(self, camera_scroll):
         mx, my = pygame.mouse.get_pos()

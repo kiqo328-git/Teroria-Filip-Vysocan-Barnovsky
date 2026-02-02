@@ -1,8 +1,9 @@
 import pygame
-from settings import PLAYER_SCALE, NPC_INTERACT_RANGE, TILE_SIZE, CURRENT_PLAYER_REACH,CHUNK_SIZE
+from settings import PLAYER_SCALE, NPC_INTERACT_RANGE, TILE_SIZE, CURRENT_PLAYER_REACH, CHUNK_SIZE
 from calculation import is_player_near_block
 
 
+# ... (Triedy BodyPart, Body, Leg, Head, Arm ostanú rovnaké - SKRÁTENÉ) ...
 class BodyPart(pygame.sprite.Sprite):
     def __init__(self, image_path, scale):
         super().__init__()
@@ -37,20 +38,22 @@ class CharacterBody:
     def __init__(self, x, y, scale, skin, isLocal=True):
         self.scale = scale
         self.facing_right = False
+        self.isLocal = isLocal
 
         collider_width = 50 * scale
         collider_height = 160 * scale
 
-        self.rect = pygame.Rect(x, y, int(collider_width), int(collider_height))
-        self.rect.center = (x, y)
+        self.rect = pygame.Rect(int(x), int(y), int(collider_width), int(collider_height))
+        self.rect.center = (int(x), int(y))
 
-        if isLocal:
-            self.velocity = pygame.math.Vector2(0, 0)
-            self.speed = 350
-            self.jump_force = -12
-            self.gravity = 0.5
-            self.max_gravity = 15
-            self.grounded = False
+        self.velocity = pygame.math.Vector2(0, 0)
+
+        self.gravity = 1800
+        self.max_gravity = 1000
+        self.jump_force = -700
+        self.speed = 350
+
+        self.grounded = False
 
         self.sprites = pygame.sprite.Group()
         self.torso = Body(scale, skin["body"])
@@ -70,15 +73,12 @@ class CharacterBody:
         self.sync_sprites_to_collider()
 
     def sync_sprites_to_collider(self):
-        """Prilepí obrázky na hitbox (rect)"""
         self.torso.rect.center = self.rect.center
         center_x = self.torso.rect.centerx
         legs_y_pos = self.torso.rect.bottom
-
         self.back_leg.rect.midtop = (center_x, legs_y_pos)
         self.front_leg.rect.midtop = (center_x, legs_y_pos)
         self.head.rect.midbottom = self.torso.rect.midtop
-
         shoulder_y = self.torso.rect.top + (6 * self.scale)
         shoulder_offset = 2 * self.scale
         if not self.facing_right:
@@ -86,7 +86,6 @@ class CharacterBody:
         else:
             shoulder_x = center_x + shoulder_offset
         shoulder_pos = (shoulder_x, shoulder_y)
-
         self.back_arm.rect.midtop = shoulder_pos
         self.front_arm.rect.midtop = shoulder_pos
 
@@ -104,19 +103,19 @@ class CharacterBody:
         return self.facing_right
 
     def set_player_velocity_x(self, velocity_input):
-        self.velocity.x = velocity_input * self.speed
+        if self.isLocal:
+            self.velocity.x = velocity_input * self.speed
 
     def jump(self):
-        self.velocity.y = self.jump_force
-        self.grounded = False
+        if self.isLocal:
+            self.velocity.y = self.jump_force
+            self.grounded = False
 
     def update(self):
-        # Iba synchronizácia vizuálu
         self.sync_sprites_to_collider()
         self.sprites.update()
 
     def draw(self, screen, camera_scroll=[0, 0]):
-
         for sprite in self.sprites:
             offset_pos = (
                 sprite.rect.x - camera_scroll[0],
@@ -125,71 +124,79 @@ class CharacterBody:
             screen.blit(sprite.image, offset_pos)
 
     def destroy_block(self, xPos, yPos, chunks):
+        if not self.isLocal: return 0
         tile_col = int(xPos // TILE_SIZE)
         tile_row = int(yPos // TILE_SIZE)
-
         block_center_x = (tile_col * TILE_SIZE) + (TILE_SIZE / 2)
         block_center_y = (tile_row * TILE_SIZE) + (TILE_SIZE / 2)
-
         target_cx = int(block_center_x // (CHUNK_SIZE * TILE_SIZE))
         target_cy = int(block_center_y // (CHUNK_SIZE * TILE_SIZE))
-
         chunk_key = (target_cx, target_cy)
-
         p_center_x, p_center_y = self.get_player_pos()
 
         if chunk_key in chunks:
             if is_player_near_block(p_center_x, p_center_y, block_center_x, block_center_y,
                                     float(CURRENT_PLAYER_REACH)):
+                return chunks[chunk_key].destroy_block_at(block_center_x, block_center_y)
+        return 0
 
-                destroyed_id = chunks[chunk_key].destroy_block_at(block_center_x, block_center_y)
+    # --- POKLADANIE BLOKOV ---
+    def place_block(self, xPos, yPos, block_id, chunks):
+        if not self.isLocal: return False
 
-                if destroyed_id != 0:
-                    pass
-                    #print(f"Zniceny blok ID: {destroyed_id}")
-            else:
-                pass
+        # Ošetrenie: Nemôžeme pokladať Monstera (6) ako blok
+        if block_id == 6: return False
+
+        tile_col = int(xPos // TILE_SIZE)
+        tile_row = int(yPos // TILE_SIZE)
+        block_center_x = (tile_col * TILE_SIZE) + (TILE_SIZE / 2)
+        block_center_y = (tile_row * TILE_SIZE) + (TILE_SIZE / 2)
+
+        # Kontrola, či nekladieme blok do seba (kolízia s hráčom)
+        block_rect = pygame.Rect(tile_col * TILE_SIZE, tile_row * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+        if self.rect.colliderect(block_rect):
+            return False
+
+        target_cx = int(block_center_x // (CHUNK_SIZE * TILE_SIZE))
+        target_cy = int(block_center_y // (CHUNK_SIZE * TILE_SIZE))
+        chunk_key = (target_cx, target_cy)
+        p_center_x, p_center_y = self.get_player_pos()
+
+        if chunk_key in chunks:
+            if is_player_near_block(p_center_x, p_center_y, block_center_x, block_center_y,
+                                    float(CURRENT_PLAYER_REACH)):
+                return chunks[chunk_key].place_block_at(block_center_x, block_center_y, block_id)
+        return False
 
     def get_player_pos(self):
         return (self.rect.centerx, self.rect.centery)
 
 
-# --- NOVÁ TRIEDA NPC ---
 class NPC(CharacterBody):
     def __init__(self, x, y, scale, skin, name="Obchodník"):
-        # NPC je nehybné, nepotrebuje fyziku (isLocal=False)
         super().__init__(x, y, scale, skin, isLocal=False)
         self.name = name
         self.is_interactable = True
         self.interaction_range = NPC_INTERACT_RANGE
+        self.gift_given = False
+        self.gravity = 1800
+        self.max_gravity = 1000
 
     def update(self, player_rect):
-        """NPC logiku riadi main.py, vrátane otáčania k hráčovi."""
         self.sync_sprites_to_collider()
         self.face_target(player_rect)
         self.sprites.update()
 
     def face_target(self, target_rect):
-        """Otáča NPC smerom k hráčovi (target_rect)."""
         player_x = target_rect.centerx
         npc_x = self.rect.centerx
-
-        # Určí, ktorým smerom je hráč
         facing_right_new = player_x > npc_x
-
-        # Ak sa smer zmenil, otočí vizuál
         if self.facing_right != facing_right_new:
             self.flip()
             self.facing_right = facing_right_new
 
-    def interact(self):
-        """Logika interakcie s NPC (simulácia)."""
-        return f"NPC {self.name}: Ahoj, svetobežník! Chceš niečo kúpiť?"
-
     def is_player_in_range(self, player_center_pos):
-        """Kontroluje, či je hráč v dosahu interakcie."""
         px, py = player_center_pos
         dx = self.rect.centerx - px
         dy = self.rect.centery - py
-        # Používame vzdialenosť (na druhú) pre rýchlejší výpočet bez odmocniny
         return (dx * dx + dy * dy) <= (self.interaction_range * self.interaction_range)

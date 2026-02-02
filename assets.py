@@ -1,8 +1,6 @@
 import pygame
 import os
 from settings import *
-from tile_manager import BLOCKS
-
 
 class AssetManager:
     def __init__(self):
@@ -23,37 +21,45 @@ class AssetManager:
             self.dark_textures[block_id] = []
 
             name = data["name"]
-            filename = data.get("file")
+            filename_data = data.get("file") # Môže to byť string alebo list
 
-            if filename:
-                path = os.path.join(ASSETS_DIR, filename)
-                try:
-                    # Načítanie obrázka
-                    img = pygame.image.load(path).convert_alpha()
-                    img = pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
+            if filename_data:
+                # Zistíme, či ide o jeden súbor alebo zoznam súborov
+                files_to_load = []
+                if isinstance(filename_data, list):
+                    files_to_load = filename_data
+                else:
+                    files_to_load = [filename_data]
 
-                    # Uložíme do zoznamu
-                    self.textures[block_id].append(img)
+                # Načítame všetky súbory pre tento blok
+                for fname in files_to_load:
+                    path = os.path.join(ASSETS_DIR, fname)
+                    try:
+                        # Načítanie obrázka
+                        img = pygame.image.load(path).convert_alpha()
+                        img = pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
 
-                    # Vytvorenie tmavej verzie
-                    dark_img = img.copy()
-                    dark_overlay = pygame.Surface((TILE_SIZE, TILE_SIZE))
-                    dark_overlay.fill((100, 100, 100))
-                    dark_img.blit(dark_overlay, (0, 0), special_flags=pygame.BLEND_MULT)
+                        # Uložíme do zoznamu
+                        self.textures[block_id].append(img)
 
-                    self.dark_textures[block_id].append(dark_img)
+                        # Vytvorenie tmavej verzie
+                        dark_img = img.copy()
+                        dark_overlay = pygame.Surface((TILE_SIZE, TILE_SIZE))
+                        dark_overlay.fill((100, 100, 100))
+                        dark_img.blit(dark_overlay, (0, 0), special_flags=pygame.BLEND_MULT)
 
-                    print(f"Blok '{name}': načítaný súbor '{filename}'")
+                        self.dark_textures[block_id].append(dark_img)
+                        print(f"Blok '{name}': načítaný variant '{fname}'")
 
-                except FileNotFoundError:
-                    print(f"CHYBA: Súbor '{filename}' sa nenašiel v priečinku '{ASSETS_DIR}'!")
-                    self._create_fallback(block_id)
-
+                    except FileNotFoundError:
+                        print(f"CHYBA: Súbor '{fname}' sa nenašiel v priečinku '{ASSETS_DIR}'!")
+                        self._create_fallback_single(block_id)
             else:
                 print(f"VAROVANIE: Blok '{name}' nemá definovaný súbor!")
-                self._create_fallback(block_id)
+                self._create_fallback_single(block_id)
 
-    def _create_fallback(self, block_id):
+    def _create_fallback_single(self, block_id):
+        """Vytvorí jeden ružový štvorec ako fallback pre chýbajúci súbor."""
         surf = pygame.Surface((TILE_SIZE, TILE_SIZE))
         surf.fill((255, 0, 255))  # Ružová pre chybu
         self.textures[block_id].append(surf)
@@ -68,34 +74,3 @@ class AssetManager:
         for part, filename in raw_skin.items():
             full_paths[part] = os.path.join(ASSETS_DIR, filename)
         return full_paths
-
-
-    def _generate_dummy_texture(self, name, variant_index):
-        """
-        Vyrobí farebný štvorec s jemným šumom, aby to vyzeralo ako blok.
-        """
-        surf = pygame.Surface((TILE_SIZE, TILE_SIZE))
-        base_color = COLORS.get(name, (255, 0, 255))  # Ružová ak nenájde farbu
-
-        # Jemná variácia farby pre každý variant
-        r, g, b = base_color
-        offset = variant_index * 15
-        r = int(max(0, min(255, r + offset)))
-        g = int(max(0, min(255, g + offset)))
-        b = int(max(0, min(255, b + offset)))
-
-        surf.fill((r, g, b))
-
-        # Nakreslíme rámik
-        pygame.draw.rect(surf, (0, 0, 0), (0, 0, TILE_SIZE, TILE_SIZE), 1)
-
-        # Nakreslíme malý detail do stredu - OPRAVENÉ
-        center = TILE_SIZE // 2
-        # Tu bola chyba: pri odpočítaní musíme dať pozor, aby sme nešli pod 0
-        detail_r = max(0, r - 20)
-        detail_g = max(0, g - 20)
-        detail_b = max(0, b - 20)
-
-        pygame.draw.rect(surf, (detail_r, detail_g, detail_b), (center - 4, center - 4, 8, 8))
-
-        return surf

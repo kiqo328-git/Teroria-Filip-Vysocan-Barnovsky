@@ -1,28 +1,42 @@
 class InventoryManager:
-    def __init__(self, hotbar_size=8, initial=None):
-        if initial:
-            self.hotbar = list(initial)
-        else:
-            self.hotbar = [0] * hotbar_size
-        self.index = 0
+    def __init__(self, hotbar_size=8):
+        self.hotbar = [{'id': 0, 'count': 0} for _ in range(hotbar_size)]
+        self.selected_index = 0
 
-    def set_hotbar(self, items):
-        self.hotbar = list(items)
-        if self.index >= len(self.hotbar):
-            self.index = max(0, len(self.hotbar) - 1)
+    def add_item(self, block_id, amount=1):
+        if block_id == 0:
+            return False
 
-    def get_selected(self):
-        if 0 <= self.index < len(self.hotbar):
-            return self.hotbar[self.index]
+        for slot in self.hotbar:
+            if slot['id'] == block_id:
+                slot['count'] += amount
+                return True
+
+        for slot in self.hotbar:
+            if slot['id'] == 0:
+                slot['id'] = block_id
+                slot['count'] = amount
+                return True
+
+        # 3. Ak je všetko plné
+        print("Inventár je plný!")
+        return False
+
+    def get_selected_item(self):
+        slot = self.hotbar[self.selected_index]
+        if slot['count'] > 0:
+            return slot['id']
         return 0
 
-    def scroll(self, delta):
-        if len(self.hotbar) == 0:
-            return
-        self.index = (self.index + delta) % len(self.hotbar)
+    def remove_selected_item(self, amount=1):
+        slot = self.hotbar[self.selected_index]
+        if slot['id'] != 0 and slot['count'] > 0:
+            slot['count'] -= amount
+            if slot['count'] <= 0:
+                slot['id'] = 0
+                slot['count'] = 0
+            return True
+        return False
 
-    def set_index(self, idx):
-        if len(self.hotbar) == 0:
-            self.index = 0
-            return
-        self.index = max(0, min(idx, len(self.hotbar) - 1))
+    def scroll(self, delta):
+        self.selected_index = (self.selected_index - delta) % len(self.hotbar)

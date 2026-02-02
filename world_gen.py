@@ -1,16 +1,17 @@
 import math
 from settings import CHUNK_SIZE, SEED, FREQ, MULTIPLIER, BASE_HEIGHT, CAVE_THRESHOLD, CAVE_FREQ
 from settings import MAX_CAVE_DEPTH, MAX_THRESHOLD_INCREASE, OCTAVES, LACUNARITY, GAIN
-from settings import NPC_SPAWN_FREQ, NPC_SPAWN_THRESHOLD, MIN_NPC_DIST  # UPRAVENÝ IMPORT
+from settings import NPC_SPAWN_FREQ, NPC_SPAWN_THRESHOLD, MIN_NPC_DIST
+from settings import VEGETATION_CHANCE
 import random
 import numpy as np
 from numba import njit
 from calculation import smoothstep
 
+
 @njit(fastmath=True)
 def get_height_data(cx):
     heights = np.zeros(CHUNK_SIZE, dtype=np.float32)
-
     scale = 1.0 / FREQ
 
     for i in range(CHUNK_SIZE):
@@ -20,16 +21,12 @@ def get_height_data(cx):
 
         random.seed(int(SEED + x0))
         v0 = random.random()
-
         random.seed(int(SEED + x1))
         v1 = random.random()
 
         t = (world_x - x0) / scale
-
         t = smoothstep(t)
-
         noise_value = v0 * (1 - t) + v1 * t
-
         heights[i] = noise_value * MULTIPLIER + BASE_HEIGHT
 
     return heights
@@ -38,7 +35,6 @@ def get_height_data(cx):
 @njit(fastmath=True)
 def get_single_cave_noise(wx, wy, freq):
     scale = 1.0 / freq
-
     x0 = (wx // scale) * scale
     x1 = x0 + scale
     y0 = (wy // scale) * scale
@@ -49,26 +45,23 @@ def get_single_cave_noise(wx, wy, freq):
     s01 = int(SEED + x0 * 73856093 + y1 * 19349663)
     s11 = int(SEED + x1 * 73856093 + y1 * 19349663)
 
-    random.seed(s00)
+    random.seed(s00);
     v00 = random.random()
-    random.seed(s10)
+    random.seed(s10);
     v10 = random.random()
-    random.seed(s01)
+    random.seed(s01);
     v01 = random.random()
-    random.seed(s11)
+    random.seed(s11);
     v11 = random.random()
 
     tx = (wx - x0) / scale
     ty = (wy - y0) / scale
-
-    tx = smoothstep(tx)
+    tx = smoothstep(tx);
     ty = smoothstep(ty)
 
     v_top = v00 * (1 - tx) + v10 * tx
     v_bottom = v01 * (1 - tx) + v11 * tx
-
-    noise_value = v_top * (1 - ty) + v_bottom * ty
-    return noise_value
+    return v_top * (1 - ty) + v_bottom * ty
 
 
 @njit(fastmath=True)
@@ -93,23 +86,27 @@ def get_fbm_cave_noise(wx, wy):
 def get_npc_spawn_noise(wx):
     freq = NPC_SPAWN_FREQ
     scale = 1.0 / freq
-
     x0 = (wx // scale) * scale
     x1 = x0 + scale
-
     s0 = int(SEED * 2 + x0 * 73856093)
     s1 = int(SEED * 2 + x1 * 73856093)
-
-    random.seed(s0)
+    random.seed(s0);
     v0 = random.random()
-    random.seed(s1)
+    random.seed(s1);
     v1 = random.random()
-
     t = (wx - x0) / scale
     t = smoothstep(t)
+    return v0 * (1 - t) + v1 * t
 
-    noise_value = v0 * (1 - t) + v1 * t
-    return noise_value
+
+# --- NOVÁ FUNKCIA PRE VEGETÁCIU ---
+@njit(fastmath=True)
+def should_spawn_vegetation(wx, wy):
+    # Unikátny seed pre každú súradnicu
+    s = int(SEED * 3 + wx * 12345 + wy * 67890)
+    random.seed(s)
+    # Vráti True ak padne číslo menšie ako šanca (10%)
+    return random.random() < VEGETATION_CHANCE
 
 
 @njit(fastmath=True)
@@ -127,62 +124,62 @@ def generate_chunk_data(cx, cy, height_data):
 
             surface_level = int(height_data[x])
 
-            # --- 1. NPC Spawnovanie (Iba na povrchu) ---
-            if world_y == surface_level:
-                npc_noise = get_npc_spawn_noise(world_x)
-
-                # NOVÁ PODMIENKA: Ak je hluk dostatočne vysoký A NPC nebolo spawnuté v blízkej vzdialenosti
-                if npc_noise > NPC_SPAWN_THRESHOLD and (world_x - last_spawn_x) >= MIN_NPC_DIST:
-
-                    # Pre istotu, aby sa NPC spawnovalo len raz v bloku
-                    if world_x > last_spawn_x:
-                        npc_spawn_coords.append((world_x, world_y))
-                        last_spawn_x = world_x
-
-            # --- 2. Jaskyne (Procedurálny šum FBM s vplyvom hĺbky) ---
-
-            # Hĺbka pod povrchom (0 na povrchu)
+            # --- Výpočet jaskýň ---
             depth = max(0.0, world_y - surface_level)
-
-            # Výpočet koeficientu zväčšenia (0.0 až 1.0)
             scale = min(1.0, depth / MAX_CAVE_DEPTH)
-
-            # Dynamický Prah (pre väčšie/častejšie jaskyne v hĺbke)
             current_threshold = CAVE_THRESHOLD + (MAX_THRESHOLD_INCREASE * scale)
-
-            # Volanie noise funkcie FBM
             cave_val = get_fbm_cave_noise(world_x, world_y)
-
-            # Ak je hodnota šumu nižšia ako prah, vytvoríme jaskyňu.
             is_cave = (cave_val < current_threshold)
 
-            # --- 3. Osádzanie Blokov ---
+            # --- Generovanie objektov na povrchu (NPC a Vegetácia) ---
+            # Objekt sa nachádza na "surface_level - 1" (blok vzduchu nad zemou)
+            if world_y == surface_level - 1:
+                # Kontrola: Je blok POD nami pevný? (Nie je to vchod do jaskyne?)
+                cave_val_below = get_fbm_cave_noise(world_x, surface_level)
+                is_cave_below = (cave_val_below < CAVE_THRESHOLD)
 
-            # -- POZADIE (Vždy vyplnené pod úrovňou terénu) --
+                if not is_cave_below:
+                    # 1. NPC
+                    npc_noise = get_npc_spawn_noise(world_x)
+                    if npc_noise > NPC_SPAWN_THRESHOLD and (world_x - last_spawn_x) >= MIN_NPC_DIST:
+                        if world_x > last_spawn_x:
+                            npc_spawn_coords.append((world_x, world_y))
+                            last_spawn_x = world_x
+
+                    # 2. Vegetácia
+                    # Ak tu nie je NPC, skúsime spawnúť vegetáciu
+                    # (Aby NPC nestálo v kríku, aj keď by to nevadilo, lebo vegetácia nie je solid)
+                    else:
+                        if should_spawn_vegetation(world_x, world_y):
+                            layer_fg[y][x] = 5  # ID 5 = Vegetácia
+
+            # --- Osádzanie Blokov (Mriežka) ---
+
+            # -- POZADIE --
             if world_y >= surface_level:
                 if world_y < surface_level + 5:
                     layer_bg[y][x] = 3  # Dirt
                 else:
                     layer_bg[y][x] = 2  # Stone
             else:
-                layer_bg[y][x] = 0  # Vzduch
+                layer_bg[y][x] = 0
 
-            # -- POPREDIE (Pevné bloky) --
+            # -- POPREDIE --
             if world_y < surface_level:
-                layer_fg[y][x] = 0  # Vzduch nad zemou
+                # Ak sme už nastavili vegetáciu (ID 5), neprepíšeme ju na 0
+                if layer_fg[y][x] != 5:
+                    layer_fg[y][x] = 0
 
             elif world_y == surface_level:
-                # Ak je to povrch, a nie je tu jaskyňa
                 if not is_cave:
-                    layer_fg[y][x] = 1  # Grass
+                    layer_fg[y][x] = 1  # Grass (Povrch)
                 else:
-                    layer_fg[y][x] = 0  # Vchod do jaskyne (Ak je na povrchu diera, je tam vzduch)
+                    layer_fg[y][x] = 0  # Diera do jaskyne
 
-            else:
+            else:  # Pod povrchom
                 if is_cave and world_y < surface_level + 500:
-                    layer_fg[y][x] = 0  # Jaskyňa (vzduch)
+                    layer_fg[y][x] = 0
                 else:
-                    # Pevná hmota
                     if world_y < surface_level + 5:
                         layer_fg[y][x] = 3  # Dirt
                     elif world_y > surface_level + 500:

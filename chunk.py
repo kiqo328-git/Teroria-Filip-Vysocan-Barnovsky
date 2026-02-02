@@ -2,6 +2,7 @@ import pygame
 from settings import TILE_SIZE, CHUNK_SIZE
 from world_gen import generate_chunk_data, get_height_data
 
+
 class Chunk:
     def __init__(self, cx, cy, tile_manager):
         self.cx = cx
@@ -9,11 +10,9 @@ class Chunk:
         self.tile_manager = tile_manager
 
         self.surface_heights = get_height_data(cx)
-        # ZMENA: generate_chunk_data teraz vracia aj npc_spawn_coords
         self.layer_fg, self.layer_bg, self.npc_spawn_coords = generate_chunk_data(cx, cy, self.surface_heights)
 
-        self.image = pygame.Surface((CHUNK_SIZE * TILE_SIZE, CHUNK_SIZE * TILE_SIZE))
-        self.image.set_colorkey((0, 0, 0))
+        self.image = pygame.Surface((CHUNK_SIZE * TILE_SIZE, CHUNK_SIZE * TILE_SIZE), pygame.SRCALPHA)
 
         self.rect = self.image.get_rect()
         self.rect.x = cx * CHUNK_SIZE * TILE_SIZE
@@ -39,18 +38,37 @@ class Chunk:
         if 0 <= local_x < CHUNK_SIZE and 0 <= local_y < CHUNK_SIZE:
             block_id = self.layer_fg[local_y][local_x]
 
-            if block_id != 0 and block_id != 4:
+            if block_id != 0 and block_id != 4:  # Nemôžeš zničiť Bedrock (4)
                 self.layer_fg[local_y][local_x] = 0
                 self.needs_update = True
-                return block_id
 
+                # --- ÚPRAVA: Vegetácia (5) nevráti item ---
+                if block_id == 5:
+                    return 0
+
+                return block_id
         return 0
+
+    # --- NOVÁ METÓDA PRE POKLADANIE ---
+    def place_block_at(self, world_x, world_y, block_id):
+        local_x = int((world_x - self.rect.x) // TILE_SIZE)
+        local_y = int((world_y - self.rect.y) // TILE_SIZE)
+
+        if 0 <= local_x < CHUNK_SIZE and 0 <= local_y < CHUNK_SIZE:
+            current_id = self.layer_fg[local_y][local_x]
+
+            # Môžeme stavať iba do vzduchu (0) alebo cez vegetáciu (5)
+            if current_id == 0 or current_id == 5:
+                self.layer_fg[local_y][local_x] = block_id
+                self.needs_update = True
+                return True
+        return False
 
     def render(self):
         if not self.needs_update:
             return
 
-        self.image.fill((0, 0, 0))
+        self.image.fill((0, 0, 0, 0))
 
         for y in range(CHUNK_SIZE):
             for x in range(CHUNK_SIZE):
