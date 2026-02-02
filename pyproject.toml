@@ -3,13 +3,14 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "teroria"
+name = "troria"
 version = "1.0.0"
-description = "OPGP projekt - 2D Sandbox hra v Pygone"
+description = "OPGP projekt - 2D Sandbox hra v Pygame"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [
-    { name = "Filip Vysocan" },
+    { name = "Filip" },
+    { name = "Vysocan" },
     { name = "Barnovsky" },
 ]
 dependencies = [
@@ -19,4 +20,4 @@ dependencies = [
 ]
 
 [project.urls]
-"Source" = "https://github.com/..." # Tu si môžeš doplniť link ak to máš na gite
+"Source" = "https://github.com/..."
