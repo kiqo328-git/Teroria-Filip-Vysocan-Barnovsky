@@ -31,9 +31,9 @@ Terroria je 2D procedurálne generovaná sandbox hra inšpirovaná Terrariou, na
 2.  **Nainštaluj závislosti:**
     Odporúčame použiť virtuálne prostredie (`venv`).
     ```bash
-    pip install -r requirements.txt
+    pip install -e .
     ```
-    *Ak nemáš `requirements.txt`, nainštaluj manuálne:*
+    *Ak nemáš `pyproject.toml`, nainštaluj manuálne:*
     ```bash
     pip install pygame numpy numba
     ```
